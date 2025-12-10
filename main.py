@@ -6,7 +6,7 @@
 import logging
 import os
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
-from bot.handlers import start, help_command, handle_documents
+from bot.handlers import start, help_command, handle_documents, process_files_command
 from config import Config
 
 # Настройка логирования
@@ -34,6 +34,7 @@ def main():
     # Регистрация обработчиков
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("process", process_files_command))
     application.add_handler(MessageHandler(filters.Document.ALL, handle_documents))
 
     # Запуск бота

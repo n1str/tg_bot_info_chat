@@ -5,7 +5,8 @@
 """
 
 import logging
-from typing import List
+from typing import List, Optional
+from datetime import datetime
 from bs4 import BeautifulSoup
 from parsers.base_parser import BaseParser
 from models.user import TelegramUser
@@ -26,10 +27,13 @@ class HTMLParser(BaseParser):
             # Обработка сообщений
             messages = soup.find_all('div', class_='message')
             for message in messages:
+                # Извлечение даты сообщения
+                message_date = self._extract_message_date_from_html(message)
+                
                 # Извлечение автора сообщения из from_name
                 from_name_element = message.find('div', class_='from_name')
                 if from_name_element:
-                    user_data = self._extract_user_from_html(from_name_element)
+                    user_data = self._extract_user_from_html(from_name_element, message_date)
                     if user_data:
                         self._add_user(user_data)
                         logger.info(f"Добавлен пользователь: {user_data.full_name}")
@@ -61,7 +65,31 @@ class HTMLParser(BaseParser):
             logger.error(f"Тип ошибки: {type(e).__name__}")
             return []
 
-    def _extract_user_from_html(self, from_name_element) -> TelegramUser:
+    def _extract_message_date_from_html(self, message_element) -> Optional[datetime]:
+        """Извлечение даты сообщения из HTML элемента."""
+        try:
+            # Ищем элемент с датой (обычно это div с классом date или атрибут title)
+            date_element = message_element.find('div', class_='date')
+            if date_element:
+                date_str = date_element.get('title', '') or date_element.get_text()
+                if date_str:
+                    # Пробуем распарсить дату
+                    formats = [
+                        '%d.%m.%Y %H:%M:%S',
+                        '%Y-%m-%d %H:%M:%S',
+                        '%d.%m.%Y %H:%M',
+                        '%Y-%m-%d %H:%M'
+                    ]
+                    for fmt in formats:
+                        try:
+                            return datetime.strptime(date_str.strip(), fmt)
+                        except ValueError:
+                            continue
+        except Exception as e:
+            logger.debug(f"Не удалось извлечь дату из HTML: {str(e)}")
+        return None
+
+    def _extract_user_from_html(self, from_name_element, message_date: Optional[datetime] = None) -> TelegramUser:
         """Извлечение данных пользователя из HTML элемента from_name."""
         try:
             # Извлечение полного имени из from_name
@@ -80,16 +108,19 @@ class HTMLParser(BaseParser):
             first_name = name_parts[0] if name_parts else "Unknown"
             last_name = name_parts[1] if len(name_parts) > 1 else None
 
-            # Создаем пользователя с уникальным ID на основе имени
-            user = TelegramUser(
-                user_id=user_id,
-                username=None,  # В HTML экспорте Telegram username не доступен
-                first_name=first_name,
-                last_name=last_name,
-                bio=None
-            )
+            # Создаем словарь с данными пользователя для использования базового метода
+            user_data = {
+                'id': user_id,
+                'username': None,  # В HTML экспорте Telegram username не доступен
+                'first_name': first_name,
+                'last_name': last_name,
+                'bio': None
+            }
 
-            logger.info(f"Извлечен пользователь: {user.full_name} (ID: {user_id})")
+            # Используем базовый метод для создания пользователя
+            user = self._extract_user_from_message({'from': user_data}, message_date)
+
+            logger.info(f"Извлечен пользователь: {user.full_name if user else 'None'} (ID: {user_id})")
             return user
         except Exception as e:
             logger.error(f"Ошибка при извлечении пользователя из HTML: {str(e)}")
