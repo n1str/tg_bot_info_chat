@@ -76,11 +76,16 @@ class ExportProcessor:
             channel_users = []  # Пользователи с каналами
             
             for user in users:
-                # Проверка на упомянутого пользователя (временный ID на основе hash username)
-                # Обычно реальные user_id положительные и не очень большие
-                if user.user_id < -1000000 or (user.user_id > 1000000 and user.username and not user.first_name):
+                # Проверка на упомянутого пользователя
+                # Упоминания обычно имеют временный ID (hash) и отсутствие имени
+                is_mentioned = (
+                    (user.user_id < -1000000) or 
+                    (abs(user.user_id) > 1000000 and user.username and not user.first_name and not user.last_name)
+                )
+                
+                if is_mentioned:
                     mentioned_users.append(user)
-                elif user.has_channel:
+                elif user.has_channel is True:  # Явно True, не None
                     channel_users.append(user)
                 else:
                     regular_users.append(user)
@@ -127,7 +132,7 @@ class ExportProcessor:
             ws.cell(row=row_num, column=3, value=user.full_name)
             ws.cell(row=row_num, column=4, value=user.bio if user.bio else None)
             ws.cell(row=row_num, column=5, value=user.registration_date.isoformat() if user.registration_date else None)
-            ws.cell(row=row_num, column=6, value="Да" if user.has_channel else "Нет")
+            ws.cell(row=row_num, column=6, value="Да" if user.has_channel is True else ("Нет" if user.has_channel is False else "Неизвестно"))
 
         # Авторазмер колонок
         for column in ws.columns:

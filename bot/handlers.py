@@ -5,7 +5,6 @@
 import os
 import tempfile
 import logging
-import zipfile
 import shutil
 from datetime import datetime
 from telegram import Update
@@ -88,6 +87,11 @@ async def handle_documents(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def process_files_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик команды /process для обработки загруженных файлов."""
+    user_id = None
+    processing_msg = None
+    temp_dir = None
+    file_paths = []
+    
     try:
         user_id = update.effective_user.id
         
@@ -109,7 +113,6 @@ async def process_files_command(update: Update, context: ContextTypes.DEFAULT_TY
         # Создание временной директории для файлов
         temp_dir = tempfile.mkdtemp(dir=Config.TEMP_DIR)
         user_files[user_id]['temp_dir'] = temp_dir
-        file_paths = []
 
         try:
             # Загрузка и сохранение файлов
@@ -179,11 +182,14 @@ async def process_files_command(update: Update, context: ContextTypes.DEFAULT_TY
             # Удаление временных файлов
             for file_path in file_paths:
                 if os.path.exists(file_path):
-                    os.remove(file_path)
-                    logger.info(f"Временный файл удален: {file_path}")
+                    try:
+                        os.remove(file_path)
+                        logger.info(f"Временный файл удален: {file_path}")
+                    except Exception as e:
+                        logger.warning(f"Не удалось удалить файл {file_path}: {str(e)}")
 
             # Удаление временной директории
-            if os.path.exists(temp_dir):
+            if temp_dir and os.path.exists(temp_dir):
                 try:
                     shutil.rmtree(temp_dir)  # Используем rmtree для рекурсивного удаления
                     logger.info(f"Временная директория удалена: {temp_dir}")
@@ -191,21 +197,33 @@ async def process_files_command(update: Update, context: ContextTypes.DEFAULT_TY
                     logger.warning(f"Не удалось удалить директорию {temp_dir}: {str(e)}")
 
             # Очистка данных пользователя
-            if user_id in user_files:
+            if user_id and user_id in user_files:
                 del user_files[user_id]
 
             # Удаление сообщения о обработке
-            try:
-                await context.bot.delete_message(
-                    chat_id=update.effective_chat.id,
-                    message_id=processing_msg.message_id
-                )
-            except Exception as e:
-                logger.warning(f"Не удалось удалить сообщение: {str(e)}")
+            if processing_msg:
+                try:
+                    await context.bot.delete_message(
+                        chat_id=update.effective_chat.id,
+                        message_id=processing_msg.message_id
+                    )
+                except Exception as e:
+                    logger.warning(f"Не удалось удалить сообщение: {str(e)}")
 
     except Exception as e:
         logger.error(f"Ошибка при обработке документов: {str(e)}", exc_info=True)
-        await update.message.reply_text(Config.ERROR_MESSAGE.format(str(e)))
+        try:
+            await update.message.reply_text(Config.ERROR_MESSAGE.format(str(e)))
+        except Exception as send_error:
+            logger.error(f"Не удалось отправить сообщение об ошибке: {str(send_error)}")
+        
         # Очистка данных пользователя в случае ошибки
-        if user_id in user_files:
+        if user_id and user_id in user_files:
             del user_files[user_id]
+        
+        # Очистка временных файлов при ошибке
+        if temp_dir and os.path.exists(temp_dir):
+            try:
+                shutil.rmtree(temp_dir)
+            except Exception as cleanup_error:
+                logger.warning(f"Не удалось очистить временную директорию: {str(cleanup_error)}")

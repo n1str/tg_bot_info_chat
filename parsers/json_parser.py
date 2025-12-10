@@ -6,7 +6,7 @@
 
 import json
 import logging
-from typing import List, Dict, Any, Union
+from typing import List, Dict, Any, Union, Optional
 from datetime import datetime
 from parsers.base_parser import BaseParser
 from models.user import TelegramUser
@@ -63,7 +63,7 @@ class JSONParser(BaseParser):
             logger.error(f"Ошибка при парсинге JSON файла {file_path}: {str(e)}")
             return []
 
-    def _extract_message_date(self, message: Dict[str, Any]) -> datetime:
+    def _extract_message_date(self, message: Dict[str, Any]) -> Optional[datetime]:
         """Извлечение даты сообщения."""
         try:
             date_str = message.get('date', '')
@@ -103,7 +103,7 @@ class JSONParser(BaseParser):
             return ' '.join(text_parts)
         return ''
 
-    def _extract_mentioned_users_from_message(self, message: Dict[str, Any], message_date: datetime = None) -> List[TelegramUser]:
+    def _extract_mentioned_users_from_message(self, message: Dict[str, Any], message_date: Optional[datetime] = None) -> List[TelegramUser]:
         """Извлечение упомянутых пользователей через entities."""
         mentioned_users = []
         
