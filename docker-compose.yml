@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  tg_chat_bot:
+    build: .
+    container_name: tg_chat_bot
+    restart: unless-stopped
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+    volumes:
+      - ./temp:/app/temp
+    networks:
+      - bot_network
+
+networks:
+  bot_network:
+    driver: bridge
