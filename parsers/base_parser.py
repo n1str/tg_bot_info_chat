@@ -160,6 +160,9 @@ class BaseParser(ABC):
             if user_id in self.users:
                 # Обновляем существующего пользователя
                 existing_user = self.users[user_id]
+                # Если новый пользователь не mention_only, сбрасываем флаг
+                if not user.is_mention_only:
+                    existing_user.is_mention_only = False
                 # Обновляем дату регистрации если она раньше
                 if user_id in self.user_first_message_date:
                     existing_user.registration_date = self.user_first_message_date[user_id]

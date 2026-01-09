@@ -26,6 +26,7 @@ class TelegramUser(BaseModel):
     first_message_id: Optional[int] = None  # ID первого сообщения
     first_reaction_date: Optional[datetime] = None  # Дата первой реакции
     first_reaction_emoji: Optional[str] = None  # Эмодзи первой реакции
+    is_mention_only: bool = False  # Флаг для пользователей, которые только упомянуты
 
     @property
     def full_name(self) -> str:

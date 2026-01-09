@@ -61,7 +61,8 @@ class JSONParser(BaseParser):
                             user_id=hash(username),  # Временный ID
                             username=username,
                             first_name=None,
-                            last_name=None
+                            last_name=None,
+                            is_mention_only=True  # Помечаем как только упомянутого
                         )
                         self._add_user(temp_user)
                 
@@ -152,7 +153,8 @@ class JSONParser(BaseParser):
                             user_id=hash(username),
                             username=username,
                             first_name=None,
-                            last_name=None
+                            last_name=None,
+                            is_mention_only=True  # Помечаем как только упомянутого
                         )
                         mentioned_users.append(temp_user)
             elif entity_type == 'text_mention':

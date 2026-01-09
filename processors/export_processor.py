@@ -29,6 +29,9 @@ class ExportProcessor:
     def _generate_text_export(self, users: List[TelegramUser]) -> str:
         """Генерация текстового экспорта для небольшого количества пользователей."""
         try:
+            # Фильтруем только реальных участников (исключаем mention_only)
+            real_users = [user for user in users if not user.is_mention_only]
+            
             # Создание временного файла
             temp_file = tempfile.NamedTemporaryFile(
                 mode='w',
@@ -38,13 +41,15 @@ class ExportProcessor:
             )
 
             # Запись заголовка
-            temp_file.write(f"Список участников чата ({len(users)} пользователей)\n\n")
+            temp_file.write(f"Список участников чата ({len(real_users)} пользователей)\n\n")
 
             # Запись пользователей
-            for i, user in enumerate(users, 1):
-                temp_file.write(f"{i}. {user.display_name}\n")
+            for i, user in enumerate(real_users, 1):
+                temp_file.write(f"{i}. {user.full_name}\n")
                 if user.user_id:
                     temp_file.write(f"   Telegram ID: {user.user_id}\n")
+                if user.username:
+                    temp_file.write(f"   Username: @{user.username}\n")
                 if user.phone_number:
                     temp_file.write(f"   Телефон: {user.phone_number}\n")
 
